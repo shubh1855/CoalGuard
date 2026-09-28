@@ -1,7 +1,37 @@
-__pycache__/
-*.pyc
-*.pyo
+# OS
+.DS_Store
+Thumbs.db
+
+# Environments
+.env
 .venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build & Packages
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Application specific
 coalguard.db
 evidence/
 data/
