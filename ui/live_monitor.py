@@ -75,10 +75,11 @@ def render():
     if zone_mode == "manual":
         col1, col2 = st.sidebar.columns(2)
         if col1.button("Configure Zone", use_container_width=True):
-            err = capture_reference_frame(source_type, uploaded_file)
+            frame, err = capture_reference_frame(source_type, uploaded_file)
             if err:
                 st.sidebar.error(err)
             else:
+                st.session_state.manual_zone_frame = frame
                 st.session_state.manual_zone_config_open = True
                 if st.session_state.running:
                     st.session_state.running = False
