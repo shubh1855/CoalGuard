@@ -5,9 +5,6 @@ from dataclasses import dataclass
 from pathlib import Path
 import time
 
-import cv2
-import numpy as np
-
 
 @dataclass
 class ViolationEvent:
@@ -59,7 +56,7 @@ class ViolationLogger:
         self,
         worker_id: int,
         violation_type: str,
-        frame: np.ndarray,
+        frame,  # np.ndarray — lazy import avoids requiring numpy at module load
         timestamp_epoch: int | None = None,
     ) -> ViolationEvent | None:
         event_epoch = timestamp_epoch or int(time.time())
@@ -76,6 +73,7 @@ class ViolationLogger:
         filename = f"worker_{worker_id}_{safe_violation}_{event_epoch}.jpg"
         image_path = self.evidence_dir / filename
 
+        import cv2  # lazy import — only needed when actually writing evidence frames
         cv2.imwrite(str(image_path), frame)
         self._last_capture_at[violation_key] = event_epoch
 

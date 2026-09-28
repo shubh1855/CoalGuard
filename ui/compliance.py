@@ -70,7 +70,7 @@ def render(site_filter=None):
 
         st.dataframe(
             df.style.map(style_status, subset=["Status"]),
-            use_container_width=True,
+            width='stretch',
             height=400,
         )
     else:

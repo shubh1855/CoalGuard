@@ -14,7 +14,7 @@ def render():
     sites = db.query(Site).all()
     inspections = db.query(Inspection).all()
 
-    m = folium.Map(location=[22.5, 82.0], zoom_start=5, tiles="CartoDB dark_matter")
+    m = folium.Map(location=[22.5, 82.0], zoom_start=5, tiles="OpenStreetMap")
 
     severity_colors = {"Low": "green", "Medium": "orange", "High": "red", "Critical": "darkred"}
 

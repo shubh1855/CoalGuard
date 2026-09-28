@@ -47,7 +47,7 @@ def render():
                     range=["#4ade80", "#facc15", "#f87171", "#60a5fa"]
                 ))
             ).properties(height=250)
-            st.altair_chart(chart, use_container_width=True)
+            st.altair_chart(chart, width='stretch')
 
     with col_right:
         st.markdown("**Recent Alerts**")
@@ -67,7 +67,7 @@ def render():
         chart2 = alt.Chart(daily).mark_line(point=True).encode(
             x="date:T", y="count:Q"
         ).properties(height=200)
-        st.altair_chart(chart2, use_container_width=True)
+        st.altair_chart(chart2, width='stretch')
     else:
         st.info("No CV violations recorded yet.")
 

@@ -6,7 +6,6 @@ import time
 import sys
 import os
 
-import cv2
 import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
@@ -57,7 +56,9 @@ def open_video_source(sidebar):
             st.stop()
         tmp = tempfile.NamedTemporaryFile(delete=False)
         tmp.write(sidebar.uploaded_file.getbuffer())
+        import cv2  # lazy import — cv2 only needed when streaming
         return cv2.VideoCapture(tmp.name)
+    import cv2  # lazy import
     return cv2.VideoCapture(0)
 
 
@@ -140,8 +141,9 @@ def run_monitoring_loop(
 
         maybe_send_email(alerter, alerter_ready, result)
 
+        import cv2  # lazy import
         rgb = cv2.cvtColor(result.frame, cv2.COLOR_BGR2RGB)
-        video_placeholder.image(rgb, channels="RGB", use_column_width=True)
+        video_placeholder.image(rgb, channels="RGB", use_container_width=True)
 
         update_metrics(metrics_row, result)
 
