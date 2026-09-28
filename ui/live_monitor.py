@@ -1,6 +1,3 @@
-# ui/live_monitor.py — CoalGuard adaptation of SafeSight live monitor
-from __future__ import annotations
-
 import tempfile
 import time
 import sys
@@ -12,29 +9,17 @@ import streamlit as st
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from database import SessionLocal, Site
 from modules.violation_logger import log_violation_to_db
-from modules.alerts import ZoneIntrusionAlerter
 from modules.tracked_detector import TrackedSafeSightDetector
-from ui.components import render_feed_caption, render_header, render_sidebar
-from ui.state import initialize_session_state
-from ui.styles import APP_STYLES
-from ui.zone_editor import render_zone_editor
+from ui.zone_editor import render_zone_editor, capture_reference_frame
 
 SIGN_MODEL_PATH = "models/sign_best.pt"
 
-
 @st.cache_resource
-def load_detector(
-    model_path: str,
-    conf: float,
-    source_type: str,
-    session_epoch: int,
-) -> TrackedSafeSightDetector:
+def load_detector(model_path: str, conf: float, source_type: str, session_epoch: int):
     sign_path = SIGN_MODEL_PATH if Path(SIGN_MODEL_PATH).exists() else None
     if sign_path is None:
-        st.warning(
-            f"Sign model not found at '{SIGN_MODEL_PATH}' — "
-            "Auto zone via sign detection is disabled. "
-        )
+        st.sidebar.warning(f"Sign model '{SIGN_MODEL_PATH}' not found. Auto zone is disabled.")
+        
     return TrackedSafeSightDetector(
         model_path=model_path,
         conf_threshold=conf,
@@ -45,122 +30,167 @@ def load_detector(
         zone_mode="auto",
     )
 
+def init_state():
+    if "running" not in st.session_state:
+        st.session_state.running = False
+        st.session_state.alerts = []
+        st.session_state.frames_processed = 0
+        st.session_state.session_epoch = int(time.time())
+        st.session_state.voice_enabled = False
+        st.session_state.manual_zone_points = []
+        st.session_state.manual_zone_config_open = False
 
-def _get_sites():
+def render():
+    init_state()
+    st.title("Live Safety Monitor")
+    st.write("Real-time PPE compliance and restricted-zone monitoring powered by YOLOv8 and DeepSORT.")
+
+    # --- Sidebar Controls ---
+    st.sidebar.header("Monitor Controls")
+
     db = SessionLocal()
     sites = db.query(Site).all()
     db.close()
-    return sites
-
-
-def render_site_selector():
-    """Render site selector in sidebar. Returns selected site_id."""
-    sites = _get_sites()
     if not sites:
-        st.sidebar.warning("No sites in DB. Run seed.py.")
-        return 1
+        st.sidebar.warning("No sites in DB. Please run seed.py.")
+        return
+    
     site_names = [s.name for s in sites]
-    selected = st.sidebar.selectbox("Active Mine Site", site_names, key="coalguard_site")
-    site_id = next(s.id for s in sites if s.name == selected)
+    selected_site = st.sidebar.selectbox("Active Mine Site", site_names, key="coalguard_site")
+    site_id = next(s.id for s in sites if s.name == selected_site)
     st.session_state["active_site_id"] = site_id
-    return site_id
+    
+    st.sidebar.divider()
+    confidence = st.sidebar.slider("Detection Confidence", 0.1, 0.9, 0.45, 0.05)
+    source_type = st.sidebar.radio("Video Source", ["Upload video", "Webcam"])
+    
+    uploaded_file = None
+    if source_type == "Upload video":
+        uploaded_file = st.sidebar.file_uploader("Upload Video", type=["mp4", "avi", "mov"])
+        
+    st.sidebar.divider()
+    zone_mode_label = st.sidebar.radio("Restricted Zone", ["Auto-Detect", "Manual", "Off"])
+    zone_mode = "auto" if zone_mode_label == "Auto-Detect" else ("manual" if zone_mode_label == "Manual" else "off")
+    
+    if zone_mode == "manual":
+        col1, col2 = st.sidebar.columns(2)
+        if col1.button("Configure Zone", use_container_width=True):
+            err = capture_reference_frame(source_type, uploaded_file)
+            if err:
+                st.sidebar.error(err)
+            else:
+                st.session_state.manual_zone_config_open = True
+                if st.session_state.running:
+                    st.session_state.running = False
+                st.rerun()
+        if col2.button("Clear Zone", use_container_width=True):
+            st.session_state.manual_zone_points = []
+            st.session_state.manual_zone_config_open = False
+            
+    st.session_state.voice_enabled = st.sidebar.toggle("Voice Alerts", value=st.session_state.voice_enabled)
+    
+    st.sidebar.divider()
+    scol1, scol2 = st.sidebar.columns(2)
+    if scol1.button("Start", type="primary", use_container_width=True):
+        st.session_state.running = True
+        st.session_state.alerts = []
+        st.session_state.frames_processed = 0
+        st.session_state.session_epoch = int(time.time())
+        load_detector.clear()
+        st.session_state.manual_zone_config_open = False
+        st.rerun()
+    if scol2.button("Stop", use_container_width=True):
+        st.session_state.running = False
+        st.rerun()
 
+    # --- Manual Zone Editor ---
+    if st.session_state.manual_zone_config_open:
+        render_zone_editor()
+        st.divider()
 
-def apply_zone(detector, zone_mode: str, manual_zone_points: list) -> None:
+    # --- Main Metrics ---
+    metrics_cols = st.columns(3)
+    metrics_row = [metrics_cols[0].empty(), metrics_cols[1].empty(), metrics_cols[2].empty()]
+    
+    # Defaults
+    metrics_row[0].metric("Workers Detected", 0)
+    metrics_row[1].metric("Violations", 0)
+    metrics_row[2].metric("FPS", "0.0")
+
+    st.divider()
+
+    # --- Playback & Alerts ---
+    main_cols = st.columns([2.5, 1], gap="large")
+    video_placeholder = main_cols[0].empty()
+    alert_box = main_cols[1].empty()
+
+    if not st.session_state.running:
+        video_placeholder.info("Click **Start** in the sidebar to begin live monitoring.")
+        with alert_box.container():
+            st.subheader("Active Alerts")
+            st.write("No alerts. System idle.")
+        return
+
+    # --- Run Loop ---
+    model_path = "models/best.pt"
+    if not Path(model_path).exists():
+        st.error(f"Model file not found at '{model_path}'.")
+        st.stop()
+
+    detector = load_detector(model_path, confidence, source_type, st.session_state.session_epoch)
+
+    # Zone configuration
     if zone_mode == "off":
         detector.clear_zone()
         detector.set_zone_mode("manual")
     elif zone_mode == "manual":
-        if manual_zone_points:
-            detector.set_zone(manual_zone_points, source="MANUAL")
+        pts = st.session_state.get("manual_zone_points", [])
+        if pts:
+            detector.set_zone(pts, source="MANUAL")
             detector.set_zone_mode("manual")
         else:
             detector.clear_zone()
             detector.set_zone_mode("manual")
-            st.warning("Manual zone enabled but no polygon configured.")
+            st.warning("Manual zone is enabled but no points have been drawn yet.")
     else:
         detector.set_zone_mode("auto")
 
-
-def open_video_source(sidebar_config):
-    if sidebar_config.source_type == "Upload video":
-        if sidebar_config.uploaded_file is None:
-            st.warning("Upload a video first.")
-            st.stop()
-        tmp = tempfile.NamedTemporaryFile(delete=False)
-        tmp.write(sidebar_config.uploaded_file.getbuffer())
-        import cv2
-        return cv2.VideoCapture(tmp.name)
-    import cv2
-    return cv2.VideoCapture(0)
-
-
-def update_metrics(metrics_row, result) -> None:
-    st.session_state.zone_source = result.zone_source
-    metrics_row.empty()
-    with metrics_row.container():
-        cols = st.columns(3)
-        cols[0].metric("Workers", result.total_workers)
-        cols[1].metric("Violations", result.violation_count)
-        cols[2].metric("FPS", f"{result.fps:.1f}")
-
-
-def maybe_send_email(alerter, alerter_ready: bool, result) -> None:
-    if not (alerter_ready and st.session_state.alerts_enabled):
-        return
-    try:
-        sent = alerter.notify_if_needed(result)
-        if sent:
-            st.session_state.alert_email_count += 1
-            st.session_state.alert_last_sent = time.strftime("%H:%M:%S")
-            st.session_state.alert_last_error = None
-    except Exception as exc:
-        st.session_state.alert_last_error = str(exc)
-
-
-def render_idle_state(video_placeholder, alert_box) -> None:
-    video_placeholder.markdown(
-        "<div style='padding:60px;text-align:center;color:#888;'>Start monitoring to display the live safety stream.</div>",
-        unsafe_allow_html=True,
-    )
-    alert_box.empty()
-
-
-def run_monitoring_loop(
-    detector,
-    sidebar_config,
-    video_placeholder,
-    metrics_row,
-    alert_box,
-    alerter,
-    alerter_ready: bool,
-) -> None:
-    site_id = st.session_state.get("active_site_id", 1)
-
+    # Voice configuration
     if detector.voice:
-        detector.voice_enabled = st.session_state.voice_enabled
-        detector.voice.set_repeat_interval(sidebar_config.zone_repeat_interval)
         if st.session_state.voice_enabled:
             detector.voice.enable()
         else:
             detector.voice.disable()
 
-    apply_zone(detector, sidebar_config.zone_mode, sidebar_config.manual_zone_points)
-
-    cap = open_video_source(sidebar_config)
+    # Video Capture
+    if source_type == "Upload video":
+        if not uploaded_file:
+            st.error("Please upload a video file in the sidebar before starting.")
+            st.stop()
+        tmp = tempfile.NamedTemporaryFile(delete=False)
+        tmp.write(uploaded_file.getbuffer())
+        import cv2
+        cap = cv2.VideoCapture(tmp.name)
+    else:
+        import cv2
+        cap = cv2.VideoCapture(0)
 
     if not cap.isOpened():
-        st.error("Cannot open video source.")
+        st.error("Cannot open the selected video source.")
         st.stop()
+
+    video_placeholder.info("Starting video stream...")
 
     while st.session_state.running:
         ret, frame = cap.read()
         if not ret:
+            st.info("Video stream ended.")
             break
 
         result = detector.process_frame(frame)
         st.session_state.frames_processed += 1
 
+        # Database Logging
         if hasattr(result, 'new_violations') and result.new_violations:
             for worker_id, violation_type, img_path in result.new_violations:
                 try:
@@ -171,100 +201,31 @@ def run_monitoring_loop(
                 except Exception:
                     pass
 
-        maybe_send_email(alerter, alerter_ready, result)
-
+        # UI Updates
         import cv2
         rgb = cv2.cvtColor(result.frame, cv2.COLOR_BGR2RGB)
         video_placeholder.image(rgb, channels="RGB", use_container_width=True)
 
-        update_metrics(metrics_row, result)
+        metrics_row[0].metric("Workers Detected", result.total_workers)
+        metrics_row[1].metric("Violations", result.violation_count)
+        metrics_row[2].metric("FPS", f"{result.fps:.1f}")
 
-        st.session_state.alerts = (
-            list(reversed(result.alerts)) + st.session_state.alerts
-        )[:10]
+        # Update Alerts Box
+        new_alerts = getattr(result, "alerts", [])
+        st.session_state.alerts = (list(reversed(new_alerts)) + st.session_state.alerts)[:10]
+        
         with alert_box.container():
+            st.subheader("Active Alerts")
+            if not st.session_state.alerts:
+                st.write("No active alerts.")
             for alert in st.session_state.alerts:
-                st.warning(alert)
+                if "ZONE" in alert.upper():
+                    st.error(alert)
+                else:
+                    st.warning(alert)
 
         time.sleep(0.01)
 
     cap.release()
     st.session_state.running = False
     st.success("Monitoring stopped.")
-
-
-def render():
-    st.markdown(APP_STYLES, unsafe_allow_html=True)
-    initialize_session_state()
-
-    try:
-        alerter = ZoneIntrusionAlerter.from_env()
-        ALERTER_READY = True
-        ALERTER_MISSING = ""
-    except EnvironmentError as env_err:
-        alerter = None
-        ALERTER_READY = False
-        ALERTER_MISSING = str(env_err)
-
-    render_site_selector()
-    
-    sidebar_config = render_sidebar(load_detector, alerter, ALERTER_READY, ALERTER_MISSING)
-
-    with st.container():
-        st.markdown("<div class='app-shell'>", unsafe_allow_html=True)
-        render_header(sidebar_config.use_manual_zone, ALERTER_READY)
-        st.write("")
-
-        if sidebar_config.zone_mode == "manual":
-            render_zone_editor()
-
-        left, right = st.columns([2.2, 1], gap="large")
-
-        with left:
-            metrics_row = st.empty()
-            st.write("")
-            feed_title, feed_caption = render_feed_caption(
-                sidebar_config.source_type,
-                sidebar_config.confidence,
-            )
-            st.subheader(feed_title)
-            st.caption(feed_caption)
-            video_placeholder = st.empty()
-
-        with right:
-            st.subheader("Active Alerts")
-            alert_box = st.empty()
-
-        if st.session_state.running:
-            if not Path(sidebar_config.model_path).exists():
-                st.error("Model file not found.")
-                st.stop()
-
-            detector = load_detector(
-                sidebar_config.model_path,
-                sidebar_config.confidence,
-                sidebar_config.source_type,
-                st.session_state.session_epoch,
-            )
-            
-            zone_err = getattr(getattr(detector, 'detector', detector), 'zone_detector_error', None)
-            if zone_err:
-                st.error(f"⚠️ Sign model failed to load — Auto zone (sign) is disabled.\n"
-                    f"```\n{zone_err}\n```\n"
-                    f"Check that `models/sign_best.pt` exists and is a valid YOLOv8 model."
-                )
-
-            run_monitoring_loop(
-                detector=detector,
-                sidebar_config=sidebar_config,
-                video_placeholder=video_placeholder,
-                metrics_row=metrics_row,
-                alert_box=alert_box,
-                alerter=alerter,
-                alerter_ready=ALERTER_READY,
-            )
-        else:
-            render_idle_state(video_placeholder, alert_box)
-
-        st.write("")
-        st.markdown("</div>", unsafe_allow_html=True)
