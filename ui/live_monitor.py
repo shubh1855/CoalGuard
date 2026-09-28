@@ -82,7 +82,7 @@ def render():
     
     if zone_mode == "manual":
         col1, col2 = st.sidebar.columns(2)
-        if col1.button("Configure Zone", use_container_width=True):
+        if col1.button("Configure Zone", use_container_width=True, key="btn_config_zone"):
             frame, err = capture_reference_frame(source_type, uploaded_file)
             if err:
                 st.sidebar.error(err)
@@ -93,7 +93,7 @@ def render():
                 if st.session_state.running:
                     st.session_state.running = False
                 st.rerun()
-        if col2.button("Clear Zone", use_container_width=True):
+        if col2.button("Clear Zone", use_container_width=True, key="btn_clear_zone"):
             st.session_state.manual_zone_points = []
             st.session_state.manual_zone_config_open = False
             
@@ -101,7 +101,7 @@ def render():
     
     st.sidebar.divider()
     scol1, scol2 = st.sidebar.columns(2)
-    if scol1.button("Start", type="primary", use_container_width=True):
+    if scol1.button("Start", type="primary", use_container_width=True, key="btn_start_monitor"):
         st.session_state.running = True
         st.session_state.alerts = []
         st.session_state.frames_processed = 0
@@ -109,7 +109,7 @@ def render():
         load_detector.clear()
         st.session_state.manual_zone_config_open = False
         st.rerun()
-    if scol2.button("Stop", use_container_width=True):
+    if scol2.button("Stop", use_container_width=True, key="btn_stop_monitor"):
         st.session_state.running = False
         st.rerun()
 
