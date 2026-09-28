@@ -64,7 +64,7 @@ def render():
         return
     
     site_names = [s.name for s in sites]
-    selected_site = st.sidebar.selectbox("Active Mine Site", site_names, key="coalguard_site")
+    selected_site = st.sidebar.selectbox("Active Mine Site", site_names, key="SafeSight_site")
     site_id = next(s.id for s in sites if s.name == selected_site)
     st.session_state["active_site_id"] = site_id
     

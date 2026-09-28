@@ -32,7 +32,7 @@ dist/
 .streamlit/secrets.toml
 
 # Application specific
-coalguard.db
+SafeSight.db
 evidence/
 data/
 assets/images/

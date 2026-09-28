@@ -1,4 +1,4 @@
-# app.py — CoalGuard entry point
+# app.py — SafeSight entry point
 import streamlit as st
 import sys
 import os
@@ -9,13 +9,13 @@ from database import init_db
 init_db()
 
 st.set_page_config(
-    page_title="CoalGuard",
+    page_title="SafeSight",
     page_icon="⛏️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-st.sidebar.title("⛏️ CoalGuard")
+st.sidebar.title("⛏️ SafeSight")
 st.sidebar.caption("AI-Enabled Governance Platform for Coal Mining")
 st.sidebar.divider()
 
@@ -29,7 +29,6 @@ page = st.sidebar.radio("Navigate", [
 ])
 
 st.sidebar.divider()
-st.sidebar.caption("WIET Hackverse 2.0 | Team Code Crusaders")
 
 if page == "Dashboard":
     from ui.dashboard import render

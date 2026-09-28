@@ -36,7 +36,7 @@ def render():
         st.download_button(
             label="Download Report PDF",
             data=pdf,
-            file_name=f"coalguard_{site.name.replace(' ', '_')}_report.pdf",
+            file_name=f"SafeSight_{site.name.replace(' ', '_')}_report.pdf",
             mime="application/pdf",
         )
 

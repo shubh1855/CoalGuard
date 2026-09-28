@@ -101,7 +101,7 @@ class ViolationLogger:
 
 
 def log_violation_to_db(db_session, site_id, worker_id, violation_type, image_path=None):
-    """Write a CV violation and alert to the CoalGuard database."""
+    """Write a CV violation and alert to the SafeSight database."""
     import sys
     import os
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))

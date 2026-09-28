@@ -1,5 +1,5 @@
 [project]
-name = "coalguard"
+name = "SafeSight"
 version = "0.1.0"
 description = "AI-Enabled Governance Platform for Coal Mining"
 readme = "README.md"
@@ -13,6 +13,10 @@ dependencies = [
 
     # --- Database ---
     "sqlalchemy>=2.0.0",
+    "psycopg2-binary>=2.9.0",
+
+    # --- Charts ---
+    "plotly>=5.18.0",
 
     # --- Data & Charts ---
     "pandas>=2.0.0",

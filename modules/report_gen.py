@@ -15,7 +15,7 @@ def generate_site_report(site, compliance_items, inspections, violations):
     story = []
 
     title_style = ParagraphStyle("Title", parent=styles["Title"], fontSize=18, spaceAfter=12)
-    story.append(Paragraph("CoalGuard Governance Report", title_style))
+    story.append(Paragraph("SafeSight Governance Report", title_style))
     story.append(Paragraph(
         f"Site: {site.name} | Generated: {datetime.utcnow().strftime('%d %b %Y %H:%M')} UTC",
         styles["Normal"]

@@ -1,1 +1,1 @@
-# coalguard package
+# SafeSight package
