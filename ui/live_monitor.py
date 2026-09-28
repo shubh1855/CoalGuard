@@ -33,12 +33,20 @@ def load_detector(model_path: str, conf: float, source_type: str, session_epoch:
 def init_state():
     if "running" not in st.session_state:
         st.session_state.running = False
+    if "alerts" not in st.session_state:
         st.session_state.alerts = []
+    if "frames_processed" not in st.session_state:
         st.session_state.frames_processed = 0
+    if "session_epoch" not in st.session_state:
         st.session_state.session_epoch = int(time.time())
+    if "voice_enabled" not in st.session_state:
         st.session_state.voice_enabled = False
+    if "manual_zone_points" not in st.session_state:
         st.session_state.manual_zone_points = []
+    if "manual_zone_config_open" not in st.session_state:
         st.session_state.manual_zone_config_open = False
+    if "manual_zone_canvas_rev" not in st.session_state:
+        st.session_state.manual_zone_canvas_rev = 0
 
 def render():
     init_state()
@@ -81,6 +89,7 @@ def render():
             else:
                 st.session_state.manual_zone_frame = frame
                 st.session_state.manual_zone_config_open = True
+                st.session_state.manual_zone_canvas_rev += 1
                 if st.session_state.running:
                     st.session_state.running = False
                 st.rerun()
