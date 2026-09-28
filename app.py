@@ -5,6 +5,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from database import init_db
+from i18n import t, get_language, set_language, LANGUAGES
 
 init_db()
 
@@ -15,36 +16,54 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-st.sidebar.title("⛏️ SafeSight")
-st.sidebar.caption("AI-Enabled Governance Platform for Coal Mining")
+# ── Language selector (top of sidebar) ──
+lang_codes = list(LANGUAGES.keys())
+lang_labels = list(LANGUAGES.values())
+current_lang = get_language()
+current_idx = lang_codes.index(current_lang) if current_lang in lang_codes else 0
+
+selected_label = st.sidebar.selectbox(
+    f"🌐 {t('app.language')}",
+    lang_labels,
+    index=current_idx,
+    key="lang_selector",
+)
+selected_code = lang_codes[lang_labels.index(selected_label)]
+if selected_code != get_language():
+    set_language(selected_code)
+    st.rerun()
+
+st.sidebar.divider()
+st.sidebar.title(f"⛏️ {t('app.title')}")
+st.sidebar.caption(t("app.subtitle"))
 st.sidebar.divider()
 
-page = st.sidebar.radio("Navigate", [
-    "Dashboard",
-    "Live Safety Monitor",
-    "Compliance Tracker",
-    "Inspection Management",
-    "Mine Site Map",
-    "Reports",
+page = st.sidebar.radio(t("app.nav_label"), [
+    t("app.pages.dashboard"),
+    t("app.pages.live_monitor"),
+    t("app.pages.compliance"),
+    t("app.pages.inspections"),
+    t("app.pages.map"),
+    t("app.pages.reports"),
 ])
 
 st.sidebar.divider()
 
-if page == "Dashboard":
+if page == t("app.pages.dashboard"):
     from ui.dashboard import render
     render()
-elif page == "Live Safety Monitor":
+elif page == t("app.pages.live_monitor"):
     from ui.live_monitor import render
     render()
-elif page == "Compliance Tracker":
+elif page == t("app.pages.compliance"):
     from ui.compliance import render
     render()
-elif page == "Inspection Management":
+elif page == t("app.pages.inspections"):
     from ui.inspections import render
     render()
-elif page == "Mine Site Map":
+elif page == t("app.pages.map"):
     from ui.map_view import render
     render()
-elif page == "Reports":
+elif page == t("app.pages.reports"):
     from ui.reports import render
     render()

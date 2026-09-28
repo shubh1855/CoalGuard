@@ -8,6 +8,7 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from database import SessionLocal, Site, Inspection, Violation, ComplianceItem
+from i18n import t as _t
 
 # ──────────────────────────────
 # Custom CSS
@@ -112,6 +113,10 @@ def _site_popup_html(site, violations_count, overdue_count, inspections_count, c
     total_comp = overdue_count + compliant_count
     comp_pct = int(compliant_count / total_comp * 100) if total_comp > 0 else 0
     bar_color = "#22c55e" if comp_pct >= 70 else "#f59e0b" if comp_pct >= 40 else "#ef4444"
+    lbl_violations = _t("map.violations")
+    lbl_overdue = _t("map.overdue")
+    lbl_inspections = _t("map.inspections")
+    lbl_compliance = _t("map.compliance")
     return f"""
     <div style="font-family:Inter,sans-serif;min-width:220px;padding:4px">
         <div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:2px">{site.name}</div>
@@ -119,18 +124,18 @@ def _site_popup_html(site, violations_count, overdue_count, inspections_count, c
         <div style="display:flex;gap:12px;margin-bottom:10px">
             <div style="text-align:center">
                 <div style="font-size:20px;font-weight:700;color:#ef4444">{violations_count}</div>
-                <div style="font-size:10px;color:#64748b">Violations</div>
+                <div style="font-size:10px;color:#64748b">{lbl_violations}</div>
             </div>
             <div style="text-align:center">
                 <div style="font-size:20px;font-weight:700;color:#f59e0b">{overdue_count}</div>
-                <div style="font-size:10px;color:#64748b">Overdue</div>
+                <div style="font-size:10px;color:#64748b">{lbl_overdue}</div>
             </div>
             <div style="text-align:center">
                 <div style="font-size:20px;font-weight:700;color:#3b82f6">{inspections_count}</div>
-                <div style="font-size:10px;color:#64748b">Inspections</div>
+                <div style="font-size:10px;color:#64748b">{lbl_inspections}</div>
             </div>
         </div>
-        <div style="font-size:11px;color:#64748b;margin-bottom:4px">Compliance {comp_pct}%</div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:4px">{lbl_compliance} {comp_pct}%</div>
         <div style="background:#e2e8f0;border-radius:999px;height:6px;overflow:hidden">
             <div style="background:{bar_color};width:{comp_pct}%;height:100%;border-radius:999px;transition:width 0.3s"></div>
         </div>
@@ -150,23 +155,23 @@ def _site_stats_html(site, violations_count, overdue_count, open_insp, critical_
             <span class="stat-site-sub">{site.subsidiary}</span>
         </div>
         <div class="stat-row">
-            <span class="stat-label">CV Violations</span>
+            <span class="stat-label">{_t("map.cv_violations")}</span>
             <span class="stat-value red">{violations_count}</span>
         </div>
         <div class="stat-row">
-            <span class="stat-label">Overdue Compliance</span>
+            <span class="stat-label">{_t("map.overdue_compliance")}</span>
             <span class="stat-value amber">{overdue_count}</span>
         </div>
         <div class="stat-row">
-            <span class="stat-label">Compliance Rate</span>
+            <span class="stat-label">{_t("map.compliance_rate")}</span>
             <span class="stat-value green">{comp_pct}%</span>
         </div>
         <div class="stat-row">
-            <span class="stat-label">Open Inspections</span>
+            <span class="stat-label">{_t("map.open_inspections")}</span>
             <span class="stat-value blue">{open_insp}</span>
         </div>
         <div class="stat-row">
-            <span class="stat-label">Critical Findings</span>
+            <span class="stat-label">{_t("map.critical_findings")}</span>
             <span class="stat-value {'red' if critical_count > 0 else 'green'}">{critical_count}</span>
         </div>
     </div>"""
@@ -177,7 +182,7 @@ def _site_stats_html(site, violations_count, overdue_count, open_insp, critical_
 # ══════════════════════════════
 def render():
     st.markdown(MAP_CSS, unsafe_allow_html=True)
-    st.markdown('<div class="section-hdr">🗺️ Mine Site Map</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-hdr">🗺️ {_t("map.title")}</div>', unsafe_allow_html=True)
 
     db = SessionLocal()
 
@@ -188,17 +193,21 @@ def render():
         all_compliance = db.query(ComplianceItem).all()
 
         # ── Sidebar Controls ────────────────────────
+        lbl_sites = _t("map.layer_sites")
+        lbl_inspections = _t("map.layer_inspections")
+        lbl_heatmap = _t("map.layer_heatmap")
+
         col_ctrl1, col_ctrl2 = st.columns(2)
         with col_ctrl1:
-            tile_choice = st.selectbox("🎨 Map Style", [
+            tile_choice = st.selectbox(f"🎨 {_t('map.style')}", [
                 "OpenStreetMap",
                 "Topographic",
                 "Satellite",
             ], index=0)
         with col_ctrl2:
-            layers = st.multiselect("📍 Layers", [
-                "Sites", "Inspections", "Violation Heatmap",
-            ], default=["Sites", "Inspections", "Violation Heatmap"])
+            layers = st.multiselect(f"📍 {_t('map.layers')}", [
+                lbl_sites, lbl_inspections, lbl_heatmap,
+            ], default=[lbl_sites, lbl_inspections, lbl_heatmap])
 
         # ── Free tile providers (no API keys needed) ──
         TILE_CONFIGS = {
@@ -238,7 +247,7 @@ def render():
         }
 
         # ── Sites layer ─────────────────────────────
-        if "Sites" in layers:
+        if lbl_sites in layers:
             for site in sites:
                 if not (site.latitude and site.longitude):
                     continue
@@ -290,11 +299,14 @@ def render():
                 ).add_to(m)
 
         # ── Inspections layer (clustered) ───────────
-        if "Inspections" in layers:
+        if lbl_inspections in layers:
             marker_cluster = MarkerCluster(
-                name="Inspections",
+                name=_t("map.layer_inspections"),
                 options={"maxClusterRadius": 40},
             ).add_to(m)
+
+            no_obs = _t("map.no_observations")
+            insp_label = _t("map.inspection_label")
 
             for insp in all_inspections:
                 if not (insp.latitude and insp.longitude):
@@ -303,7 +315,7 @@ def render():
                 site_name = next((s.name for s in sites if s.id == insp.site_id), "Unknown")
                 popup = f"""
                 <div style="font-family:Inter,sans-serif;min-width:180px">
-                    <div style="font-weight:600;color:#1e293b;margin-bottom:4px">{insp.inspection_type} Inspection</div>
+                    <div style="font-weight:600;color:#1e293b;margin-bottom:4px">{insp.inspection_type} {insp_label}</div>
                     <div style="font-size:11px;color:#64748b;margin-bottom:6px">{site_name}</div>
                     <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
                         <span style="
@@ -313,7 +325,7 @@ def render():
                         ">{insp.severity}</span>
                         <span style="font-size:11px;color:#475569">{insp.status}</span>
                     </div>
-                    <div style="font-size:11px;color:#475569;line-height:1.4">{insp.observations or 'No observations'}</div>
+                    <div style="font-size:11px;color:#475569;line-height:1.4">{insp.observations or no_obs}</div>
                     <div style="font-size:10px;color:#94a3b8;margin-top:4px">{insp.date.strftime('%d %b %Y') if insp.date else ''}</div>
                 </div>
                 """
@@ -330,12 +342,11 @@ def render():
                 ).add_to(marker_cluster)
 
         # ── Violation heatmap layer ─────────────────
-        if "Violation Heatmap" in layers:
+        if lbl_heatmap in layers:
             heat_data = []
             for v in all_violations:
                 site = next((s for s in sites if s.id == v.site_id), None)
                 if site and site.latitude and site.longitude:
-                    # Add slight jitter so violations at the same site spread out
                     import random
                     lat = site.latitude + random.uniform(-0.02, 0.02)
                     lon = site.longitude + random.uniform(-0.02, 0.02)
@@ -344,7 +355,7 @@ def render():
             if heat_data:
                 HeatMap(
                     heat_data,
-                    name="Violation Density",
+                    name=_t("map.layer_heatmap"),
                     radius=25,
                     blur=15,
                     max_zoom=10,
@@ -368,35 +379,35 @@ def render():
 
         with stats_col:
             # Legend
-            legend_html = """
+            legend_html = f"""
             <div class="legend-box">
-                <div class="legend-title">Legend</div>
+                <div class="legend-title">{_t("map.legend")}</div>
                 <div class="legend-item">
                     <div class="legend-dot" style="background:linear-gradient(135deg,#3b82f6,#60a5fa);box-shadow:0 0 6px rgba(59,130,246,0.4)"></div>
-                    Mine Site
+                    {_t("map.legend_site")}
                 </div>
                 <div class="legend-item">
                     <div class="legend-dot" style="background:#22c55e"></div>
-                    Low Severity
+                    {_t("map.legend_low")}
                 </div>
                 <div class="legend-item">
                     <div class="legend-dot" style="background:#f59e0b"></div>
-                    Medium Severity
+                    {_t("map.legend_medium")}
                 </div>
                 <div class="legend-item">
                     <div class="legend-dot" style="background:#ef4444"></div>
-                    High Severity
+                    {_t("map.legend_high")}
                 </div>
                 <div class="legend-item">
                     <div class="legend-dot" style="background:#dc2626"></div>
-                    Critical Severity
+                    {_t("map.legend_critical")}
                 </div>
             </div>
             """
             st.markdown(legend_html, unsafe_allow_html=True)
 
             # Per-site stats
-            st.markdown('<div class="legend-title" style="margin-top:8px">SITE DETAILS</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="legend-title" style="margin-top:8px">{_t("map.site_details")}</div>', unsafe_allow_html=True)
             for site in sites:
                 v_count = sum(1 for v in all_violations if v.site_id == site.id)
                 o_count = sum(1 for c in all_compliance if c.site_id == site.id and c.status == "Overdue")

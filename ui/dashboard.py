@@ -9,6 +9,7 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from database import SessionLocal, Site, Violation, ComplianceItem, Inspection, AlertLog
+from i18n import t
 
 # ──────────────────────────────────────────────
 # Custom CSS
@@ -42,19 +43,6 @@ DASHBOARD_CSS = """
 .alert-badge.low      { background: rgba(34,197,94,0.2); color: #4ade80; }
 .alert-msg  { color: #cbd5e1; font-size: 13px; margin-top: 6px; line-height: 1.4; }
 .alert-time { color: #64748b; font-size: 11px; margin-top: 4px; }
-
-/* Section header */
-.section-hdr {
-    font-family: 'Inter', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
-    color: #e2e8f0;
-    letter-spacing: -0.01em;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
 </style>
 """
 
@@ -72,16 +60,6 @@ PLOTLY_LAYOUT = dict(
         font=dict(size=11, color="#94a3b8"),
     ),
 )
-
-
-def _kpi_metric(label, value, icon, delta=None, delta_color="inverse"):
-    """Render a KPI using st.metric with an emoji prefix."""
-    st.metric(
-        label=f"{icon} {label}",
-        value=value,
-        delta=delta,
-        delta_color=delta_color,
-    )
 
 
 def _alert_card(alert):
@@ -110,13 +88,13 @@ def render():
         site_names = {s.id: s.name for s in sites}
 
         # ── Global site filter ──────────────────────
-        site_options = ["All Sites"] + [s.name for s in sites]
+        site_options = [t("dashboard.all_sites")] + [s.name for s in sites]
         selected_site = st.selectbox(
-            "🔍 Filter by Mine Site", site_options,
+            f"🔍 {t('dashboard.filter_site')}", site_options,
             index=0, key="dash_site_filter"
         )
         site_id_filter = None
-        if selected_site != "All Sites":
+        if selected_site != t("dashboard.all_sites"):
             site_id_filter = next(s.id for s in sites if s.name == selected_site)
 
         # ── Query data ──────────────────────────────
@@ -142,25 +120,25 @@ def render():
         n_open_insp = sum(1 for i in inspections if i.status in ("Open", "Action Pending"))
         n_critical = sum(1 for i in inspections if i.severity == "Critical")
 
-        # ── KPI Row using st.metric ─────────────────
-        st.subheader("📊 Operations Overview")
+        # ── KPI Row ─────────────────────────────────
+        st.subheader(f"📊 {t('dashboard.overview')}")
         c1, c2, c3, c4, c5 = st.columns(5)
         with c1:
-            _kpi_metric("Active Mine Sites", n_sites, "⛏️")
+            st.metric(f"⛏️ {t('dashboard.active_sites')}", n_sites)
         with c2:
-            _kpi_metric("CV Violations", n_violations, "🚨",
-                        delta=f"+{n_violations}" if n_violations > 0 else None,
-                        delta_color="inverse")
+            st.metric(f"🚨 {t('dashboard.cv_violations')}", n_violations,
+                      delta=f"+{n_violations}" if n_violations > 0 else None,
+                      delta_color="inverse")
         with c3:
-            _kpi_metric("Overdue Compliance", n_overdue, "⏰",
-                        delta=f"-{n_overdue}" if n_overdue > 0 else None,
-                        delta_color="inverse")
+            st.metric(f"⏰ {t('dashboard.overdue_compliance')}", n_overdue,
+                      delta=f"-{n_overdue}" if n_overdue > 0 else None,
+                      delta_color="inverse")
         with c4:
-            _kpi_metric("Open Inspections", n_open_insp, "🔍")
+            st.metric(f"🔍 {t('dashboard.open_inspections')}", n_open_insp)
         with c5:
-            _kpi_metric("Critical Findings", n_critical, "⚠️",
-                        delta=f"+{n_critical}" if n_critical > 0 else None,
-                        delta_color="inverse")
+            st.metric(f"⚠️ {t('dashboard.critical_findings')}", n_critical,
+                      delta=f"+{n_critical}" if n_critical > 0 else None,
+                      delta_color="inverse")
 
         st.divider()
 
@@ -168,7 +146,7 @@ def render():
         col_l, col_r = st.columns(2)
 
         with col_l:
-            st.markdown("**🛡️ Compliance Status**")
+            st.markdown(f"**🛡️ {t('dashboard.compliance_status')}**")
             if compliance_items:
                 status_counts = pd.DataFrame(
                     [{"Status": c.status} for c in compliance_items]
@@ -192,21 +170,20 @@ def render():
                     pull=[0.03] * len(status_counts),
                 )
                 fig.update_layout(**PLOTLY_LAYOUT, height=340, showlegend=False)
-                # Center annotation
                 total_comp = status_counts["Count"].sum()
                 compliant_count = status_counts.loc[status_counts["Status"] == "Compliant", "Count"]
                 pct = int(compliant_count.values[0] / total_comp * 100) if len(compliant_count) > 0 else 0
                 fig.add_annotation(
                     text=f"<b style='font-size:28px;color:#f1f5f9'>{pct}%</b><br>"
-                         f"<span style='font-size:11px;color:#64748b'>Compliant</span>",
+                         f"<span style='font-size:11px;color:#64748b'>{t('dashboard.compliant')}</span>",
                     showarrow=False, font=dict(size=14),
                 )
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.info("No compliance data available.")
+                st.info(t("dashboard.no_compliance"))
 
         with col_r:
-            st.markdown("**🦺 Violations by Type**")
+            st.markdown(f"**🦺 {t('dashboard.violations_by_type')}**")
             if violations:
                 vtype_df = pd.DataFrame(
                     [{"Type": v.violation_type} for v in violations]
@@ -217,16 +194,12 @@ def render():
                     "NO-Hardhat": "#ef4444", "NO-Vest": "#f59e0b",
                     "Zone Intrusion": "#8b5cf6", "NO-Gloves": "#3b82f6",
                 }
-                colors = [type_colors.get(t, "#64748b") for t in vtype_df["Type"]]
+                colors = [type_colors.get(t_val, "#64748b") for t_val in vtype_df["Type"]]
 
                 fig2 = go.Figure(go.Bar(
                     x=vtype_df["Count"], y=vtype_df["Type"],
                     orientation="h",
-                    marker=dict(
-                        color=colors,
-                        line=dict(width=0),
-                        cornerradius=6,
-                    ),
+                    marker=dict(color=colors, line=dict(width=0), cornerradius=6),
                     text=vtype_df["Count"],
                     textposition="outside",
                     textfont=dict(color="#e2e8f0", size=12),
@@ -238,12 +211,12 @@ def render():
                 )
                 st.plotly_chart(fig2, use_container_width=True)
             else:
-                st.info("No violations recorded yet.")
+                st.info(t("dashboard.no_violations"))
 
         st.divider()
 
-        # ── Row 2: Violations Timeline (area chart by site) ──
-        st.markdown("**📈 Violations Timeline**")
+        # ── Row 2: Violations Timeline ──
+        st.markdown(f"**📈 {t('dashboard.violations_timeline')}**")
         if violations:
             viol_df = pd.DataFrame([{
                 "timestamp": v.timestamp,
@@ -261,10 +234,9 @@ def render():
             fig3 = px.area(
                 daily, x="date", y="count", color="site",
                 color_discrete_map=site_colors,
-                labels={"date": "Date", "count": "Violations", "site": "Site"},
+                labels={"date": t("dashboard.date"), "count": t("dashboard.violations"), "site": t("dashboard.site")},
             )
             fig3.update_traces(line=dict(width=2))
-            # Make fill semi-transparent
             for trace in fig3.data:
                 hex_color = trace.line.color or "#3b82f6"
                 if "rgb" in (hex_color or ""):
@@ -279,7 +251,7 @@ def render():
             )
             st.plotly_chart(fig3, use_container_width=True)
         else:
-            st.info("No violations to chart.")
+            st.info(t("dashboard.no_violations_chart"))
 
         st.divider()
 
@@ -287,7 +259,7 @@ def render():
         col_left, col_right = st.columns([3, 2])
 
         with col_left:
-            st.markdown("**🔬 Inspection Severity Breakdown**")
+            st.markdown(f"**🔬 {t('dashboard.inspection_severity')}**")
             if inspections:
                 sev_df = pd.DataFrame([{
                     "Severity": i.severity,
@@ -313,10 +285,10 @@ def render():
                 )
                 st.plotly_chart(fig4, use_container_width=True)
             else:
-                st.info("No inspections logged yet.")
+                st.info(t("dashboard.no_inspections"))
 
         with col_right:
-            st.markdown("**🔔 Recent Alerts**")
+            st.markdown(f"**🔔 {t('dashboard.recent_alerts')}**")
             if alerts:
                 alerts_html = ""
                 for a in alerts[:8]:
@@ -326,13 +298,13 @@ def render():
                     unsafe_allow_html=True,
                 )
             else:
-                st.info("No alerts yet.")
+                st.info(t("dashboard.no_alerts"))
 
         st.divider()
 
         # ── Row 4: Site comparison ──
         if not site_id_filter and len(sites) > 1:
-            st.markdown("**🏭 Site Comparison**")
+            st.markdown(f"**🏭 {t('dashboard.site_comparison')}**")
 
             all_violations = db.query(Violation).all()
             all_compliance = db.query(ComplianceItem).all()
@@ -347,12 +319,17 @@ def render():
                 scrit = sum(1 for i in all_inspections if i.site_id == s.id and i.severity == "Critical")
                 comparison_data.append({
                     "Site": s.name,
-                    "Violations": sv, "Overdue": so, "Compliant": sc,
-                    "Open Inspections": si, "Critical": scrit,
+                    t("dashboard.violations"): sv,
+                    t("dashboard.overdue"): so,
+                    t("dashboard.compliant"): sc,
+                    t("dashboard.open_inspections"): si,
+                    t("dashboard.critical_findings"): scrit,
                 })
 
             comp_df = pd.DataFrame(comparison_data)
-            metrics = ["Violations", "Overdue", "Compliant", "Open Inspections", "Critical"]
+            metrics = [t("dashboard.violations"), t("dashboard.overdue"),
+                       t("dashboard.compliant"), t("dashboard.open_inspections"),
+                       t("dashboard.critical_findings")]
             met_colors = ["#ef4444", "#f59e0b", "#22c55e", "#8b5cf6", "#dc2626"]
 
             fig5 = go.Figure()

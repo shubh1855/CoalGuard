@@ -6,73 +6,101 @@ import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from database import SessionLocal, Inspection, CorrectiveAction, Site, AlertLog
+from i18n import t
 
 
 def render():
-    st.subheader("Inspection Management")
+    st.subheader(t("inspections.title"))
 
     db = SessionLocal()
     sites = db.query(Site).all()
     site_map = {s.id: s.name for s in sites}
 
-    tab1, tab2, tab3 = st.tabs(["All Inspections", "Log New Inspection", "Corrective Actions"])
+    tab1, tab2, tab3 = st.tabs([t("inspections.tab_all"), t("inspections.tab_new"), t("inspections.tab_actions")])
 
     with tab1:
         inspections = db.query(Inspection).order_by(Inspection.date.desc()).all()
         if inspections:
             df = pd.DataFrame([{
-                "ID": i.id,
-                "Site": site_map.get(i.site_id, "Unknown"),
-                "Type": i.inspection_type,
-                "Inspector": i.inspector_name,
-                "Date": i.date.strftime("%d %b %Y %H:%M"),
-                "Severity": i.severity,
-                "Status": i.status,
-                "Observations": (i.observations[:80] + "...") if i.observations and len(i.observations) > 80 else i.observations,
+                t("inspections.col_id"): i.id,
+                t("inspections.col_site"): site_map.get(i.site_id, "Unknown"),
+                t("inspections.col_type"): i.inspection_type,
+                t("inspections.col_inspector"): i.inspector_name,
+                t("inspections.col_date"): i.date.strftime("%d %b %Y %H:%M"),
+                t("inspections.col_severity"): i.severity,
+                t("inspections.col_status"): i.status,
+                t("inspections.col_observations"): (i.observations[:80] + "...") if i.observations and len(i.observations) > 80 else i.observations,
             } for i in inspections])
+
+            sev_col = t("inspections.col_severity")
 
             def style_severity(val):
                 m = {"Low": "color: #4ade80", "Medium": "color: #facc15",
                      "High": "color: #fb923c", "Critical": "color: #f87171; font-weight: bold"}
                 return m.get(val, "")
 
-            st.dataframe(df.style.map(style_severity, subset=["Severity"]), use_container_width=True, height=400)
+            st.dataframe(df.style.map(style_severity, subset=[sev_col]), use_container_width=True, height=400)
 
-            selected_id = st.number_input("Enter Inspection ID to view corrective actions", min_value=1, step=1)
-            if st.button("View Actions"):
+            selected_id = st.number_input(t("inspections.enter_id"), min_value=1, step=1)
+            if st.button(t("inspections.view_actions_btn")):
                 actions = db.query(CorrectiveAction).filter(CorrectiveAction.inspection_id == selected_id).all()
                 if actions:
                     for a in actions:
-                        st.markdown(f"**Action:** {a.description}")
-                        st.markdown(f"Assigned to: `{a.assigned_to}` | Deadline: `{a.deadline.strftime('%d %b %Y') if a.deadline else 'N/A'}` | Status: `{a.status}`")
+                        st.markdown(f"**{t('inspections.action_label')}:** {a.description}")
+                        st.markdown(f"{t('inspections.assigned_to')}: `{a.assigned_to}` | {t('inspections.deadline')}: `{a.deadline.strftime('%d %b %Y') if a.deadline else 'N/A'}` | {t('inspections.col_status')}: `{a.status}`")
                         st.divider()
                 else:
-                    st.info("No corrective actions for this inspection.")
+                    st.info(t("inspections.no_actions"))
         else:
-            st.info("No inspections logged yet.")
+            st.info(t("inspections.no_inspections"))
 
     with tab2:
-        st.markdown("#### Log Field Inspection")
+        st.markdown(f"#### {t('inspections.log_title')}")
         col1, col2 = st.columns(2)
         with col1:
-            site_name = st.selectbox("Site", [s.name for s in sites])
-            inspector = st.text_input("Inspector Name")
-            insp_type = st.selectbox("Inspection Type", ["Safety", "Environmental", "Labour"])
-            severity = st.selectbox("Severity", ["Low", "Medium", "High", "Critical"])
+            site_name = st.selectbox(t("inspections.site_label"), [s.name for s in sites])
+            inspector = st.text_input(t("inspections.inspector_name"))
+            insp_type = st.selectbox(t("inspections.inspection_type"), [
+                t("inspections.safety"), t("inspections.environmental"), t("inspections.labour")
+            ])
+            severity = st.selectbox(t("inspections.severity_label"), [
+                t("inspections.low"), t("inspections.medium"),
+                t("inspections.high"), t("inspections.critical"),
+            ])
         with col2:
-            lat = st.number_input("Latitude (GPS)", value=23.75, format="%.6f")
-            lon = st.number_input("Longitude (GPS)", value=86.42, format="%.6f")
-            status = st.selectbox("Status", ["Open", "Action Pending", "Closed"])
-            image = st.file_uploader("Attach Photo (optional)", type=["jpg", "png"])
+            lat = st.number_input(t("inspections.latitude"), value=23.75, format="%.6f")
+            lon = st.number_input(t("inspections.longitude"), value=86.42, format="%.6f")
+            status = st.selectbox(t("inspections.status_label"), [
+                t("inspections.open"), t("inspections.action_pending"), t("inspections.closed")
+            ])
+            image = st.file_uploader(t("inspections.attach_photo"), type=["jpg", "png"])
 
-        observations = st.text_area("Observations")
+        observations = st.text_area(t("inspections.observations_label"))
 
-        st.markdown("#### Corrective Action")
-        ca_desc = st.text_input("Corrective Action Description")
-        ca_assigned = st.text_input("Assign To")
-        ca_deadline = st.date_input("Deadline")
+        st.markdown(f"#### {t('inspections.corrective_action_title')}")
+        ca_desc = st.text_input(t("inspections.ca_description"))
+        ca_assigned = st.text_input(t("inspections.ca_assign_to"))
+        ca_deadline = st.date_input(t("inspections.ca_deadline"))
 
-        if st.button("Submit Inspection"):
+        # Map translated values back to English DB values
+        type_db_map = {
+            t("inspections.safety"): "Safety",
+            t("inspections.environmental"): "Environmental",
+            t("inspections.labour"): "Labour",
+        }
+        severity_db_map = {
+            t("inspections.low"): "Low",
+            t("inspections.medium"): "Medium",
+            t("inspections.high"): "High",
+            t("inspections.critical"): "Critical",
+        }
+        status_db_map = {
+            t("inspections.open"): "Open",
+            t("inspections.action_pending"): "Action Pending",
+            t("inspections.closed"): "Closed",
+        }
+
+        if st.button(t("inspections.submit_btn")):
             site_id = next(s.id for s in sites if s.name == site_name)
             img_path = None
             if image:
@@ -81,15 +109,19 @@ def render():
                 with open(img_path, "wb") as f:
                     f.write(image.read())
 
+            db_insp_type = type_db_map.get(insp_type, insp_type)
+            db_severity = severity_db_map.get(severity, severity)
+            db_status = status_db_map.get(status, status)
+
             insp = Inspection(
                 site_id=site_id,
                 inspector_name=inspector,
-                inspection_type=insp_type,
+                inspection_type=db_insp_type,
                 latitude=lat,
                 longitude=lon,
                 observations=observations,
-                status=status,
-                severity=severity,
+                status=db_status,
+                severity=db_severity,
                 image_path=img_path,
             )
             db.add(insp)
@@ -102,16 +134,16 @@ def render():
                     deadline=datetime.combine(ca_deadline, datetime.min.time()),
                     status="Pending",
                 ))
-            if severity in ["High", "Critical"]:
+            if db_severity in ["High", "Critical"]:
                 db.add(AlertLog(
                     site_id=site_id,
                     alert_type="Inspection",
-                    message=f"{severity} inspection finding at {site_name}: {observations[:100]}",
-                    severity=severity,
+                    message=f"{db_severity} inspection finding at {site_name}: {observations[:100]}",
+                    severity=db_severity,
                     channel="Dashboard",
                 ))
             db.commit()
-            st.success("Inspection logged.")
+            st.success(t("inspections.logged_msg"))
             st.rerun()
 
     with tab3:
@@ -122,15 +154,15 @@ def render():
                 site_label = site_map.get(insp.site_id, "Unknown") if insp else "Unknown"
                 col1, col2 = st.columns([4, 1])
                 with col1:
-                    st.markdown(f"**{a.description}**  \nSite: `{site_label}` | Assigned: `{a.assigned_to}` | Due: `{a.deadline.strftime('%d %b %Y') if a.deadline else 'N/A'}` | Status: `{a.status}`")
+                    st.markdown(f"**{a.description}**  \n{t('inspections.col_site')}: `{site_label}` | {t('inspections.assigned_to')}: `{a.assigned_to}` | {t('inspections.deadline')}: `{a.deadline.strftime('%d %b %Y') if a.deadline else 'N/A'}` | {t('inspections.col_status')}: `{a.status}`")
                 with col2:
-                    if st.button("Mark Done", key=f"ca_{a.id}"):
+                    if st.button(t("inspections.mark_done"), key=f"ca_{a.id}"):
                         a.status = "Completed"
                         a.completed_at = datetime.utcnow()
                         db.commit()
                         st.rerun()
                 st.divider()
         else:
-            st.info("No pending corrective actions.")
+            st.info(t("inspections.no_pending"))
 
     db.close()

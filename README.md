@@ -52,13 +52,17 @@ Open http://localhost:8501
 
 ```
 SafeSight/
-├── app.py                  # Streamlit entry point
+├── app.py                  # Streamlit entry point (+ language selector)
 ├── database.py             # SQLAlchemy ORM (PostgreSQL/SQLite, env-driven)
+├── i18n.py                 # Internationalization helper (JSON locale loader)
 ├── seed.py                 # Demo data seed (3 Indian coal mine sites)
 ├── pyproject.toml          # Dependencies (uv/pip compatible)
 ├── uv.lock                 # Strict dependency lockfile
 ├── .env                    # DATABASE_URL + SMTP config (not committed)
 ├── .env.example            # Template for .env
+├── locales/
+│   ├── en.json             # English translations (default)
+│   └── hi.json             # Hindi (हिन्दी) translations
 ├── modules/
 │   ├── detector.py         # YOLOv8 PPE detector (from SafeSight)
 │   ├── tracked_detector.py # DeepSORT tracked detector
@@ -139,11 +143,25 @@ ALERT_COOLDOWN_SECONDS=60
 | `reportlab` | PDF report generation |
 | `pandas` + `altair` | Data wrangling + legacy charts |
 
+## Internationalization (i18n)
+
+SafeSight supports **English** and **Hindi** (हिन्दी) out of the box. The language selector is in the sidebar.
+
+### How it works
+- All UI strings are stored in `locales/en.json` and `locales/hi.json`
+- The `i18n.py` module provides `t("dotted.key")` for lookups with automatic fallback to English
+- Supports string interpolation: `t("reports.generating_for", name="Jharia", subsidiary="BCCL")`
+
+### Adding a new language
+1. Copy `locales/en.json` to `locales/<code>.json` (e.g. `locales/mr.json` for Marathi)
+2. Translate all values (keep the keys in English)
+3. Set `"lang_name"` and `"lang_native"` at the top
+4. Restart the app — the new language appears automatically in the sidebar
+
 ## Planned Features & UI Enhancements
 
 **Core Extensions:**
 - Environmental monitoring with live IoT sensor feeds (Air quality, dust, gas)
-- Multilingual interface (Hindi support via i18n JSON)
 - Multi-tenant architecture for cloud deployment
 
 **Rich UI Upgrades:**
