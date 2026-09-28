@@ -36,3 +36,4 @@ coalguard.db
 evidence/
 data/
 assets/images/
+storage/voice_cache/
