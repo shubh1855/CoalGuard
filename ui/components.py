@@ -51,29 +51,14 @@ def render_sidebar(
     alerter_missing: str,
 ) -> SidebarConfig:
     with st.sidebar:
-        logo = load_logo()
-        st.markdown("<div class='sidebar-brand'>", unsafe_allow_html=True)
-        if logo:
-            st.image(logo, use_column_width=True)
-        st.markdown(
-            """
-            <div class="sidebar-brand-title">SafeSight</div>
-            <div class="sidebar-brand-copy">Safety intelligence for industrial sites.</div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.divider()
+        st.markdown("**Live Monitor Controls**")
 
         model_path = "models/best.pt"
         confidence = st.slider("Detection confidence", 0.1, 0.9, 0.45, 0.05)
-        st.markdown("<div class='view-switch-label'>View</div>", unsafe_allow_html=True)
-        view_mode = st.radio(
-            "View",
-            ["Dashboard", "Graphs"],
-            index=0,
-            horizontal=True,
-            label_visibility="collapsed",
-        )
+        
+        view_mode = "Dashboard" # hardcode view mode, we don't need 'Graphs' view here
+
 
         col1, col2 = st.columns(2)
         if col1.button("Start"):

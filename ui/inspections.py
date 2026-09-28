@@ -36,7 +36,7 @@ def render():
                      "High": "color: #fb923c", "Critical": "color: #f87171; font-weight: bold"}
                 return m.get(val, "")
 
-            st.dataframe(df.style.map(style_severity, subset=["Severity"]), width='stretch', height=400)
+            st.dataframe(df.style.map(style_severity, subset=["Severity"]), use_container_width=True, height=400)
 
             selected_id = st.number_input("Enter Inspection ID to view corrective actions", min_value=1, step=1)
             if st.button("View Actions"):
