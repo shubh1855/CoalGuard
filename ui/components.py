@@ -323,12 +323,6 @@ def render_header(use_manual_zone: bool, alerter_ready: bool) -> None:
         if st.session_state.voice_enabled
         else "<span class='voice-pill-off'>Zone Alert Off</span>"
     )
-    if not alerter_ready or st.session_state.alert_last_error:
-        email_pill_html = "<span class='email-pill-error'>Email Alerts Error</span>"
-    elif st.session_state.alerts_enabled:
-        email_pill_html = "<span class='email-pill-on'>Email Alerts On</span>"
-    else:
-        email_pill_html = "<span class='email-pill-off'>Email Alerts Off</span>"
 
     st.markdown(
         f"""
@@ -340,7 +334,6 @@ def render_header(use_manual_zone: bool, alerter_ready: bool) -> None:
             <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;">
                 {zone_detection_pill_html}
                 {voice_pill_html}
-                {email_pill_html}
             </div>
         </div>
         """,
