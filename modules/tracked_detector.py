@@ -7,8 +7,8 @@ import cv2
 import time
 from deep_sort_realtime.deepsort_tracker import DeepSort
 
-from detector import FrameResult, PersonStatus, SafeSightDetector
-from violation_logger import ViolationEvent, ViolationLogger
+from .detector import FrameResult, PersonStatus, SafeSightDetector
+from .violation_logger import ViolationEvent, ViolationLogger
 
 
 @dataclass

@@ -5,12 +5,45 @@ import tempfile
 import time
 import sys
 import os
+from pathlib import Path
 
 import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from database import SessionLocal, Site
 from modules.violation_logger import log_violation_to_db
+from modules.alerts import ZoneIntrusionAlerter
+from modules.tracked_detector import TrackedSafeSightDetector
+from ui.components import render_feed_caption, render_header, render_sidebar
+from ui.state import initialize_session_state
+from ui.styles import APP_STYLES
+from ui.zone_editor import render_zone_editor
+
+SIGN_MODEL_PATH = "models/sign_best.pt"
+
+
+@st.cache_resource
+def load_detector(
+    model_path: str,
+    conf: float,
+    source_type: str,
+    session_epoch: int,
+) -> TrackedSafeSightDetector:
+    sign_path = SIGN_MODEL_PATH if Path(SIGN_MODEL_PATH).exists() else None
+    if sign_path is None:
+        st.warning(
+            f"Sign model not found at '{SIGN_MODEL_PATH}' — "
+            "Auto zone via sign detection is disabled. "
+        )
+    return TrackedSafeSightDetector(
+        model_path=model_path,
+        conf_threshold=conf,
+        source_type=source_type,
+        session_epoch=session_epoch,
+        enable_voice=True,
+        sign_model_path=sign_path,
+        zone_mode="auto",
+    )
 
 
 def _get_sites():
@@ -49,16 +82,16 @@ def apply_zone(detector, zone_mode: str, manual_zone_points: list) -> None:
         detector.set_zone_mode("auto")
 
 
-def open_video_source(sidebar):
-    if sidebar.source_type == "Upload video":
-        if sidebar.uploaded_file is None:
+def open_video_source(sidebar_config):
+    if sidebar_config.source_type == "Upload video":
+        if sidebar_config.uploaded_file is None:
             st.warning("Upload a video first.")
             st.stop()
         tmp = tempfile.NamedTemporaryFile(delete=False)
-        tmp.write(sidebar.uploaded_file.getbuffer())
-        import cv2  # lazy import — cv2 only needed when streaming
+        tmp.write(sidebar_config.uploaded_file.getbuffer())
+        import cv2
         return cv2.VideoCapture(tmp.name)
-    import cv2  # lazy import
+    import cv2
     return cv2.VideoCapture(0)
 
 
@@ -95,7 +128,7 @@ def render_idle_state(video_placeholder, alert_box) -> None:
 
 def run_monitoring_loop(
     detector,
-    sidebar,
+    sidebar_config,
     video_placeholder,
     metrics_row,
     alert_box,
@@ -106,15 +139,15 @@ def run_monitoring_loop(
 
     if detector.voice:
         detector.voice_enabled = st.session_state.voice_enabled
-        detector.voice.set_repeat_interval(sidebar.zone_repeat_interval)
+        detector.voice.set_repeat_interval(sidebar_config.zone_repeat_interval)
         if st.session_state.voice_enabled:
             detector.voice.enable()
         else:
             detector.voice.disable()
 
-    apply_zone(detector, sidebar.zone_mode, sidebar.manual_zone_points)
+    apply_zone(detector, sidebar_config.zone_mode, sidebar_config.manual_zone_points)
 
-    cap = open_video_source(sidebar)
+    cap = open_video_source(sidebar_config)
 
     if not cap.isOpened():
         st.error("Cannot open video source.")
@@ -128,7 +161,6 @@ def run_monitoring_loop(
         result = detector.process_frame(frame)
         st.session_state.frames_processed += 1
 
-        # Log new violations to CoalGuard DB
         if hasattr(result, 'new_violations') and result.new_violations:
             for worker_id, violation_type, img_path in result.new_violations:
                 try:
@@ -137,11 +169,11 @@ def run_monitoring_loop(
                                         violation_type=violation_type, image_path=img_path)
                     db.close()
                 except Exception:
-                    pass  # Non-fatal: CSV logging still works
+                    pass
 
         maybe_send_email(alerter, alerter_ready, result)
 
-        import cv2  # lazy import
+        import cv2
         rgb = cv2.cvtColor(result.frame, cv2.COLOR_BGR2RGB)
         video_placeholder.image(rgb, channels="RGB", use_container_width=True)
 
@@ -162,8 +194,77 @@ def run_monitoring_loop(
 
 
 def render():
-    """Standalone render for CoalGuard nav."""
-    st.subheader("Live Safety Monitor")
-    site_id = render_site_selector()
-    st.info(f"Monitoring site ID: {site_id}. Use the main SafeSight app for full CV controls, or integrate via the sidebar.")
-    st.markdown("To run the full live monitor, launch `streamlit run app.py` from the project root.")
+    st.markdown(APP_STYLES, unsafe_allow_html=True)
+    initialize_session_state()
+
+    try:
+        alerter = ZoneIntrusionAlerter.from_env()
+        ALERTER_READY = True
+        ALERTER_MISSING = ""
+    except EnvironmentError as env_err:
+        alerter = None
+        ALERTER_READY = False
+        ALERTER_MISSING = str(env_err)
+
+    render_site_selector()
+    
+    sidebar_config = render_sidebar(load_detector, alerter, ALERTER_READY, ALERTER_MISSING)
+
+    with st.container():
+        st.markdown("<div class='app-shell'>", unsafe_allow_html=True)
+        render_header(sidebar_config.use_manual_zone, ALERTER_READY)
+        st.write("")
+
+        if sidebar_config.zone_mode == "manual":
+            render_zone_editor()
+
+        left, right = st.columns([2.2, 1], gap="large")
+
+        with left:
+            metrics_row = st.empty()
+            st.write("")
+            feed_title, feed_caption = render_feed_caption(
+                sidebar_config.source_type,
+                sidebar_config.confidence,
+            )
+            st.subheader(feed_title)
+            st.caption(feed_caption)
+            video_placeholder = st.empty()
+
+        with right:
+            st.subheader("Active Alerts")
+            alert_box = st.empty()
+
+        if st.session_state.running:
+            if not Path(sidebar_config.model_path).exists():
+                st.error("Model file not found.")
+                st.stop()
+
+            detector = load_detector(
+                sidebar_config.model_path,
+                sidebar_config.confidence,
+                sidebar_config.source_type,
+                st.session_state.session_epoch,
+            )
+            
+            zone_err = getattr(getattr(detector, 'detector', detector), 'zone_detector_error', None)
+            if zone_err:
+                st.error(f"⚠️ Sign model failed to load — Auto zone (sign) is disabled.\n"
+                    f"```\n{zone_err}\n```\n"
+                    f"Check that `models/sign_best.pt` exists and is a valid YOLOv8 model."
+                )
+
+            run_monitoring_loop(
+                detector=detector,
+                sidebar_config=sidebar_config,
+                video_placeholder=video_placeholder,
+                metrics_row=metrics_row,
+                alert_box=alert_box,
+                alerter=alerter,
+                alerter_ready=ALERTER_READY,
+            )
+        else:
+            render_idle_state(video_placeholder, alert_box)
+
+        st.write("")
+        st.markdown("</div>", unsafe_allow_html=True)

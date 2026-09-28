@@ -89,9 +89,7 @@ ALERT_COOLDOWN_SECONDS=60
 
 ## Planned Extensions
 
-- Flutter mobile app with GPS tagging and offline sync
 - OCR upload for digitizing paper records
-- Blockchain tamper-proof audit log
 - Environmental monitoring with IoT sensor feed
 - Multilingual interface (Hindi support)
 - PostgreSQL + multi-tenant cloud deployment
