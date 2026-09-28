@@ -204,7 +204,7 @@ def render():
         # UI Updates
         import cv2
         rgb = cv2.cvtColor(result.frame, cv2.COLOR_BGR2RGB)
-        video_placeholder.image(rgb, channels="RGB", use_container_width=True)
+        video_placeholder.image(rgb, channels="RGB", use_column_width=True)
 
         metrics_row[0].metric("Workers Detected", result.total_workers)
         metrics_row[1].metric("Violations", result.violation_count)

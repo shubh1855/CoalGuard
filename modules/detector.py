@@ -260,7 +260,7 @@ class SafeSightDetector:
         self.zone_detector_error = None   # surfaced in UI by app.py
         if sign_model_path:
             try:
-                from zone_detector import ZoneDetector
+                from .zone_detector import ZoneDetector
                 self.zone_detector = ZoneDetector(sign_model_path=sign_model_path)
                 print(f"✅ ZoneDetector ready (sign model: {sign_model_path})")
             except Exception as e:
@@ -272,7 +272,7 @@ class SafeSightDetector:
             print("ℹ️  No sign model path provided — cone-only auto-detect available.")
             # We can still do cone hull without sign model; import lightweight version
             try:
-                from zone_detector import ZoneDetector
+                from .zone_detector import ZoneDetector
                 self.zone_detector = ZoneDetector.__new__(ZoneDetector)
                 self.zone_detector.sign_model    = None
                 self.zone_detector.sign_conf     = 0.40
