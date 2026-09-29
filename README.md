@@ -1,6 +1,6 @@
 # SafeSight
 
-AI-Enabled Governance Platform for Coal Mining 
+AI-Enabled Industrial Safety Governance Platform
 
 ## Quick Start
 
@@ -55,7 +55,7 @@ SafeSight/
 ├── app.py                  # Streamlit entry point (+ language selector)
 ├── database.py             # SQLAlchemy ORM (PostgreSQL/SQLite, env-driven)
 ├── i18n.py                 # Internationalization helper (JSON locale loader)
-├── seed.py                 # Demo data seed (3 Indian coal mine sites)
+├── seed.py                 # Demo data seed (3 industrial safety sites)
 ├── pyproject.toml          # Dependencies (uv/pip compatible)
 ├── uv.lock                 # Strict dependency lockfile
 ├── .env                    # DATABASE_URL + SMTP config (not committed)
