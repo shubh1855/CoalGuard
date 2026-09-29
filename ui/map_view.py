@@ -151,7 +151,7 @@ def _site_stats_html(site, violations_count, overdue_count, open_insp, critical_
     return f"""
     <div class="map-stats-card">
         <div class="stat-site-name">
-            ⛏️ {site.name}
+            {site.name}
             <span class="stat-site-sub">{site.subsidiary}</span>
         </div>
         <div class="stat-row">

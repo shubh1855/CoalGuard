@@ -124,7 +124,7 @@ def render():
         st.subheader(f"📊 {t('dashboard.overview')}")
         c1, c2, c3, c4, c5 = st.columns(5)
         with c1:
-            st.metric(f"⛏️ {t('dashboard.active_sites')}", n_sites)
+            st.metric(t('dashboard.active_sites'), n_sites)
         with c2:
             st.metric(f"🚨 {t('dashboard.cv_violations')}", n_violations,
                       delta=f"+{n_violations}" if n_violations > 0 else None,

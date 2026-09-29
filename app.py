@@ -11,7 +11,7 @@ init_db()
 
 st.set_page_config(
     page_title="SafeSight",
-    page_icon="⛏️",
+    page_icon="assets/icon.svg",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -23,7 +23,7 @@ current_lang = get_language()
 current_idx = lang_codes.index(current_lang) if current_lang in lang_codes else 0
 
 selected_label = st.sidebar.selectbox(
-    f"🌐 {t('app.language')}",
+    t('app.language'),
     lang_labels,
     index=current_idx,
     key="lang_selector",
@@ -34,7 +34,8 @@ if selected_code != get_language():
     st.rerun()
 
 st.sidebar.divider()
-st.sidebar.title(f"⛏️ {t('app.title')}")
+st.logo("assets/logo.svg", icon_image="assets/icon.svg")
+st.sidebar.title(t('app.title'))
 st.sidebar.caption(t("app.subtitle"))
 st.sidebar.divider()
 
