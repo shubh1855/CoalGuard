@@ -1,7 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+  <style>
+    .base-color { fill: #1e293b; }
+    @media (prefers-color-scheme: dark) {
+      .base-color { fill: #f8fafc; }
+    }
+  </style>
   <!-- Base Shield -->
-  <path d="M60 10 L105 25 V60 C105 90 80 110 60 115 C40 110 15 90 15 60 V25 Z" fill="#1e293b"/>
+  <path class="base-color" d="M60 10 L105 25 V60 C105 90 80 110 60 115 C40 110 15 90 15 60 V25 Z" />
   <!-- Stylized eye -->
   <path d="M35 60 Q 60 35 85 60 Q 60 85 35 60 Z" fill="#10b981"/>
-  <circle cx="60" cy="60" r="10" fill="#1e293b"/>
+  <circle class="base-color" cx="60" cy="60" r="10" />
 </svg>

@@ -1,9 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="100%" height="100%">
+  <style>
+    .base-color { fill: #1e293b; }
+    @media (prefers-color-scheme: dark) {
+      .base-color { fill: #f8fafc; }
+    }
+  </style>
   <!-- Icon Portion -->
-  <path d="M60 15 L97.5 27.5 V56.66 C97.5 81.66 76.66 98.33 60 102.5 C43.33 98.33 22.5 81.66 22.5 56.66 V27.5 Z" fill="#1e293b"/>
+  <path class="base-color" d="M60 15 L97.5 27.5 V56.66 C97.5 81.66 76.66 98.33 60 102.5 C43.33 98.33 22.5 81.66 22.5 56.66 V27.5 Z" />
   <path d="M39.16 56.66 Q 60 35.83 80.83 56.66 Q 60 77.5 39.16 56.66 Z" fill="#10b981"/>
-  <circle cx="60" cy="56.66" r="8.33" fill="#1e293b"/>
+  <circle class="base-color" cx="60" cy="56.66" r="8.33" />
   
   <!-- Text Portion -->
-  <text x="120" y="73" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="52" font-weight="800" fill="#1e293b" letter-spacing="-1">Safe<tspan fill="#10b981">Sight</tspan></text>
+  <text x="120" y="73" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="52" font-weight="800" class="base-color" letter-spacing="-1">Safe<tspan fill="#10b981">Sight</tspan></text>
 </svg>
