@@ -12,7 +12,7 @@ load_dotenv()
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://postgres:postgres@localhost:5432/safesight"
+    "postgresql+psycopg2://postgres:postgres@localhost:5432/safesight"
 )
 
 # Only pass check_same_thread for SQLite connections

@@ -17,10 +17,11 @@ uv sync
 ```
 *(Note: If you have a GPU, you can customize the torch installation by running `uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121` afterwards)*
 
-### 3. Set Up PostgreSQL
+### 3. Set Up the Database
 
-SafeSight uses **PostgreSQL** as its primary database. The easiest way to get a local instance running is via Docker:
+SafeSight supports **PostgreSQL** (recommended) and **SQLite** (zero-config fallback).
 
+**Option A — PostgreSQL via Docker (recommended):**
 ```bash
 docker run -d \
   --name safesight-pg \
@@ -31,12 +32,20 @@ docker run -d \
   postgres:16-alpine
 ```
 
-Alternatively, install PostgreSQL natively and create the database:
+Then set in your `.env`:
+```env
+DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5432/safesight
+```
+
+**Option B — PostgreSQL (native install):**
 ```sql
 CREATE DATABASE safesight;
 ```
 
-> **SQLite fallback:** If you don't have PostgreSQL, set `DATABASE_URL=sqlite:///SafeSight.db` in your `.env` file.
+**Option C — SQLite (no setup needed):**
+```env
+DATABASE_URL=sqlite:///SafeSight.db
+```
 
 ### 4. Seed demo data and run
 ```bash
@@ -96,7 +105,7 @@ SafeSight connects to the database specified by the `DATABASE_URL` environment v
 
 | Backend | `DATABASE_URL` | Notes |
 |---------|----------------|-------|
-| **PostgreSQL** (default) | `postgresql://postgres:postgres@localhost:5432/safesight` | Recommended for production |
+| **PostgreSQL** (recommended) | `postgresql+psycopg2://postgres:postgres@localhost:5432/safesight` | Production-ready |
 | SQLite (fallback) | `sqlite:///SafeSight.db` | Zero-config, single file |
 
 The database driver for PostgreSQL is `psycopg2-binary` (included in dependencies — no C build tools needed).
@@ -118,7 +127,7 @@ The database driver for PostgreSQL is `psycopg2-binary` (included in dependencie
 Create `.env` in project root (see `.env.example`):
 ```env
 # --- Database ---
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/safesight
+DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5432/safesight
 
 # --- Email Alerts (optional) ---
 SMTP_HOST=smtp.gmail.com
