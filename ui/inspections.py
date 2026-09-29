@@ -39,7 +39,12 @@ def render():
                      "High": "color: #fb923c", "Critical": "color: #f87171; font-weight: bold"}
                 return m.get(val, "")
 
-            st.dataframe(df.style.map(style_severity, subset=[sev_col]), use_container_width=True, height=400)
+            st.dataframe(
+                df.style.map(style_severity, subset=[sev_col]),
+                use_container_width=True,
+                height=400,
+                hide_index=True,
+            )
 
             selected_id = st.number_input(t("inspections.enter_id"), min_value=1, step=1)
             if st.button(t("inspections.view_actions_btn")):

@@ -92,6 +92,7 @@ def render(site_filter=None):
             df.style.map(style_status, subset=[status_col]),
             use_container_width=True,
             height=400,
+            hide_index=True,
         )
     else:
         st.info(t("compliance.no_match"))
