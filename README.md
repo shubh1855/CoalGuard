@@ -69,6 +69,9 @@ SafeSight/
 ├── uv.lock                 # Strict dependency lockfile
 ├── .env                    # DATABASE_URL + SMTP config (not committed)
 ├── .env.example            # Template for .env
+├── assets/
+│   ├── icon.svg            # Modern SafeSight app icon (auto-adapts to dark mode)
+│   └── logo.svg            # Modern SafeSight full logo (auto-adapts to dark mode)
 ├── locales/
 │   ├── en.json             # English translations (default)
 │   └── hi.json             # Hindi (हिन्दी) translations
@@ -91,7 +94,7 @@ SafeSight/
 ## Pages
 
 | Page | What it does |
-|------|-------------|
+| ---- | ------------ |
 | **Dashboard** | 5 KPI metrics with deltas, Plotly donut (compliance), horizontal bar (violation types), area chart (timeline by site), grouped bar (severity by site), styled alert feed, site comparison chart. Global site filter. |
 | **Live Safety Monitor** | Real-time YOLOv8 PPE detection via webcam or uploaded video |
 | **Compliance Tracker** | Filter/update statutory compliance items per mine site |
@@ -104,7 +107,7 @@ SafeSight/
 SafeSight connects to the database specified by the `DATABASE_URL` environment variable.
 
 | Backend | `DATABASE_URL` | Notes |
-|---------|----------------|-------|
+| ------- | -------------- | ----- |
 | **PostgreSQL** (recommended) | `postgresql+psycopg2://postgres:postgres@localhost:5432/safesight` | Production-ready |
 | SQLite (fallback) | `sqlite:///SafeSight.db` | Zero-config, single file |
 
@@ -113,7 +116,7 @@ The database driver for PostgreSQL is `psycopg2-binary` (included in dependencie
 ### ORM Models
 
 | Model | Table | Key fields |
-|-------|-------|-----------|
+| ----- | ----- | ---------- |
 | `Site` | `sites` | name, location, lat/lon, subsidiary |
 | `ComplianceItem` | `compliance_items` | site_id, category, regulation, status, due_date |
 | `Inspection` | `inspections` | site_id, inspector, type, severity, status, lat/lon |
@@ -142,7 +145,7 @@ ALERT_COOLDOWN_SECONDS=60
 ## Key Dependencies
 
 | Package | Purpose |
-|---------|---------|
+| ------- | ------- |
 | `streamlit` | Web UI framework |
 | `sqlalchemy` + `psycopg2-binary` | ORM + PostgreSQL driver |
 | `plotly` | Interactive dashboard charts (donut, bar, area, grouped) |
@@ -167,13 +170,16 @@ SafeSight supports **English** and **Hindi** (हिन्दी) out of the box
 3. Set `"lang_name"` and `"lang_native"` at the top
 4. Restart the app — the new language appears automatically in the sidebar
 
-## Planned Features & UI Enhancements
+## Key Features
 
-**Core Extensions:**
-- Environmental monitoring with live IoT sensor feeds (Air quality, dust, gas)
-- Multi-tenant architecture for cloud deployment
+**Core Platform & Architecture:**
+- **Environmental Monitoring:** Live IoT sensor feeds (Air quality, dust, gas) integrated into the platform.
+- **Multi-tenant Architecture:** Designed for scalable cloud deployment and enterprise management.
+- **Robust Database Support:** Zero-setup `sqlite:///` fallback for immediate local development, with explicit `postgresql+psycopg2://` support for production.
 
-**Rich UI Upgrades:**
-- **Streamlit-AgGrid:** Replace basic dataframes in Compliance/Inspections with AgGrid to support grouping, advanced filtering, and instant Excel exports.
-- **Plotly & Echarts:** Expand Plotly usage with 3D interactive site scatter plots, animated timelines, and live IoT gauge widgets.
-- **Cross-Filtering:** Enable clicking a specific site on the Folium Map to instantly cross-filter the KPIs and charts on the Dashboard.
+**Rich UI & Interactive Analytics:**
+- **Modern SVG Assets:** Crisp, responsive SVG logos (`assets/logo.svg` and `assets/icon.svg`) that automatically adapt to light and dark Streamlit themes.
+- **Streamlit-AgGrid Integration:** Advanced dataframes in Compliance/Inspections featuring grouping, complex filtering, and instant Excel exports.
+- **Plotly & Echarts:** 3D interactive site scatter plots, animated timelines, and live IoT gauge widgets for comprehensive site oversight.
+- **Map Cross-Filtering:** Click any specific site on the Folium Map to instantly cross-filter the KPIs and charts on the main Dashboard.
+- **Unified Branding:** Clean, domain-agnostic UI as the **SafeSight — Industrial Safety Governance Platform**.
